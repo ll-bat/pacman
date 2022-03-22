@@ -1,27 +1,27 @@
 const GAME_LEVEL = `
     ######################################################
-    #oooooooooxooooooooooooooooooooooooooooxoooooooooooox#
-    #o########################################ooo#######o#
-    #oooooooooooxoooooooooooooooooooooooooooooxooooooooox#
-    #o#####################ooo##########################o#
-    #oooooooooooooooooxooooooooooooooooooooooooooooooooox#
-    #o##################################################o#
-    #o#ooooooooooooooooooooooooooooooooooooooooooooooooxo#
-    #o#o#o#o#####o####o######o######o####o################   
-    #o#o#o#o#ooooo#oo#o#ooooooooooo#o#oo#o#oooooooooooooo# 
-    #ooopo#o#k###oooooo#o#########o#oooooo#oooooooooooooo#  
-    #o#o#o#o#ooo#o#oo#o#ooooooooooo#o#oo#oooooooooooooooo#
-    #o#o#o#o#####o####o######o######o####o################              
-    #o#oooooooooooooooooooooooooooooooooooooooooooooooooo#
-    #o#o###############################################oo#
-    #o#oooooxoooooooooooooxooooooooooooooooxooooooooooooo#
-    #o#o......................o#######o.................o#
-    #o#o......................o#ooooo#o.................o#
-    #o#o......................o#oo#oo#o.................o#
-    #o#o......................o#oo#oo#o.................o#
-    #o#ooooooooooooooooooooooooooo#oooooooooooooooooooooo#
-    #o##########o#o###########o#oo#oo#o##########o#o####o#
-    #ooooooxooooo#oooooooxooooo#ooooo#ooooooxooooo#oooooo#
+    #         x                            x            x#
+    # ########################################   ####### #
+    #                                                    #
+    # #####################   ########################## #
+    #                 x                                  #
+    # ################################################## #
+    # #                                                x #
+    # # # # ##### #### ###### ###### #### ################   
+    # # # # #     #  # #           # #  # #              # 
+    #   p # #k###      # vvvvvvvvv #      #              #  
+    # # # # #   # #  # #           # #  #                #
+    # # # # ##### #### ###### ###### #### ################              
+    # #                                                  #
+    # # ###############################################  #
+    # #                   x                              #
+    # # ...................... ####### ................. #
+    # # ...................... #     # ................. #
+    # # ...................... #  #  # ................. #
+    # # ...................... #  #  # ................. #
+    # #                           #                      #
+    # ########## # ########### #  #  # ########## # #### #
+    #      x     #       x     #     #      x     #      #
     ###################################################### 
 `
 
@@ -71,33 +71,89 @@ const COIN_WIDTH = 20
 const COIN_HEIGHT = 20
 
 const TYPE_WALL = 'wall';
+const TYPE_VOLCANO = 'volcano';
 const TYPE_PLAYER = 'player';
+const TYPE_PLAYER_CELL = 'player_cell';
 const TYPE_COIN = 'coin';
-const TYPE_KILL_COIN = 'kill_coin'
-const TYPE_EMPTY_CELL = 'empty_cell'
-const TYPE_ENEMY = 'enemy'
+const TYPE_KILL_COIN = 'kill_coin';
+const TYPE_EMPTY_CELL = 'empty_cell';
+const TYPE_ENEMY = 'enemy';
 
 let isGameStarted = false;
 let player = null;
 
 const PLAYER_SPEED = 4.5;
 
+class CollisionHelper {
+    static collides(playerOne, playerTwo) {
+        const playerOneLeft = playerOne.x;
+        const playerOneRight = playerOne.x + playerOne.width;
+        const playerOneTop = playerOne.y;
+        const playerOneBottom = playerOne.y + playerOne.height;
+        const playerTwoLeft = playerTwo.x;
+        const playerTwoRight = playerTwo.x + playerTwo.width;
+        const playerTwoTop = playerTwo.y;
+        const playerTwoBottom = playerTwo.y + playerTwo.height;
+
+        if ([playerOneLeft, playerOneRight, playerOneTop, playerOneBottom,
+            playerTwoLeft, playerTwoRight, playerTwoTop, playerTwoBottom].includes(undefined)) {
+            debugger;
+            console.log([playerOneLeft, playerOneRight, playerOneTop, playerOneBottom,
+                playerTwoLeft, playerTwoRight, playerTwoTop, playerTwoBottom])
+            throw new DOMException();
+        }
+
+        if (playerOneLeft < playerTwoRight && playerOneRight > playerTwoRight) {
+            if (playerOneTop < playerTwoBottom && playerOneBottom > playerTwoBottom) {
+                return true;
+            }
+            if (playerOneBottom > playerTwoTop && playerOneTop < playerTwoTop) {
+                return true;
+            }
+            if (playerOneBottom <= playerTwoBottom && playerOneTop >= playerTwoTop) {
+                return true;
+            }
+        } else if (playerOneRight > playerTwoLeft && playerOneLeft < playerTwoLeft) {
+            if (playerOneTop < playerTwoBottom && playerOneBottom > playerTwoBottom) {
+                return true;
+            }
+            if (playerOneBottom > playerTwoTop && playerOneTop < playerTwoTop) {
+                return true;
+            }
+            if (playerOneBottom <= playerTwoBottom && playerOneTop >= playerTwoTop) {
+                return true;
+            }
+        } else if (playerOneLeft >= playerTwoLeft && playerOneRight <= playerTwoRight) {
+            if (playerOneTop < playerTwoBottom && playerOneBottom > playerTwoBottom) {
+                return true;
+            }
+            if (playerOneBottom > playerTwoTop && playerOneTop < playerTwoTop) {
+                return true;
+            }
+            if (playerOneBottom <= playerTwoBottom && playerOneTop >= playerTwoTop) {
+                return true;
+            }
+        }
+        return false;
+    }
+}
+
 class MoveHelper {
-    static canGoUp(x, y, speed) {
+    static canGoUp(x, y, speed, toCollideTypes = []) {
+        toCollideTypes.push(TYPE_WALL);
         const playerLeftX = x;
         const playerRightX = x + PLAYER_WIDTH;
         const playerTopY = y;
         const playerBottomY = y + PLAYER_HEIGHT;
         for (const row of game.characters) {
             for (const cellObject of row) {
-                if (cellObject.getType() === TYPE_WALL) {
+                if (toCollideTypes.includes(cellObject.getType())) {
                     const wallLeft = cellObject.x;
                     const wallRight = wallLeft + WALL_WIDTH;
                     if (wallRight > playerLeftX && wallLeft < playerRightX) {
                         const wallTopY = cellObject.y;
                         const wallBottomY = cellObject.y + WALL_HEIGHT;
                         if (playerTopY - speed < wallBottomY && playerBottomY > wallBottomY) {
-                            console.log(wallLeft, wallRight, wallBottomY)
                             return false;
                         }
                     }
@@ -107,21 +163,21 @@ class MoveHelper {
         return true;
     }
 
-    static canGoDown(x, y, speed) {
+    static canGoDown(x, y, speed, toCollideTypes = []) {
+        toCollideTypes.push(TYPE_WALL)
         const playerLeftX = x;
         const playerRightX = x + PLAYER_WIDTH;
         const playerTopY = y;
         const playerBottomY = y + PLAYER_HEIGHT;
         for (const row of game.characters) {
             for (const cellObject of row) {
-                if (cellObject.getType() === TYPE_WALL) {
+                if (toCollideTypes.includes(cellObject.getType())) {
                     const wallLeft = cellObject.x;
                     const wallRight = wallLeft + WALL_WIDTH;
                     if (wallRight > playerLeftX && wallLeft < playerRightX) {
                         const wallTopY = cellObject.y;
                         const wallBottomY = cellObject.y + WALL_HEIGHT;
                         if (playerBottomY + speed > wallTopY && playerTopY < wallTopY) {
-                            console.log(wallLeft, wallRight, wallBottomY)
                             return false;
                         }
                     }
@@ -131,14 +187,15 @@ class MoveHelper {
         return true;
     }
 
-    static canGoLeft(x, y, speed) {
+    static canGoLeft(x, y, speed, toCollideTypes = []) {
+        toCollideTypes.push(TYPE_WALL)
         const playerLeftX = x;
         const playerRightX = x + PLAYER_WIDTH;
         const playerTopY = y;
         const playerBottomY = y + PLAYER_HEIGHT;
         for (const row of game.characters) {
             for (const cellObject of row) {
-                if (cellObject.getType() === TYPE_WALL) {
+                if (toCollideTypes.includes(cellObject.getType())) {
                     const wallTopY = cellObject.y;
                     const wallBottomY = cellObject.y + WALL_HEIGHT;
                     if (wallTopY < playerBottomY && wallBottomY > playerTopY) {
@@ -154,14 +211,15 @@ class MoveHelper {
         return true;
     }
 
-    static canGoRight(x, y, speed) {
+    static canGoRight(x, y, speed, toCollideTypes = []) {
+        toCollideTypes.push(TYPE_WALL)
         const playerLeftX = x;
         const playerRightX = x + PLAYER_WIDTH;
         const playerTopY = y;
         const playerBottomY = y + PLAYER_HEIGHT;
         for (const row of game.characters) {
             for (const cellObject of row) {
-                if (cellObject.getType() === TYPE_WALL) {
+                if (toCollideTypes.includes(cellObject.getType())) {
                     const wallTopY = cellObject.y;
                     const wallBottomY = cellObject.y + WALL_HEIGHT;
                     if (wallTopY < playerBottomY && wallBottomY > playerTopY) {
@@ -185,6 +243,8 @@ class Player extends Renderer {
         this.isKillMode = false;
         this.speed = PLAYER_SPEED;
         this.killModeTimeout = false;
+        this.width = PLAYER_WIDTH;
+        this.height = PLAYER_HEIGHT;
     }
 
     render() {
@@ -193,8 +253,8 @@ class Player extends Renderer {
                 position: 'absolute',
                 top: this.y + 'px',
                 left: this.x + 'px',
-                width: PLAYER_WIDTH + 'px',
-                height: PLAYER_HEIGHT + 'px',
+                width: this.width + 'px',
+                height: this.height + 'px',
                 background: 'rgb(197,121,19)',
                 borderRadius: "50%",
                 zIndex: "99",
@@ -249,16 +309,7 @@ class Player extends Renderer {
                     if (touches) {
                         cellObject.isEaten = true;
                         if (cellObject.getType() === TYPE_KILL_COIN) {
-                            player.isKillMode = true;
-                            player.speed += 2
-                            if (player.isKillMode) {
-                                clearTimeout(player.killModeTimeout)
-                            }
-                            player.killModeTimeout = setTimeout(() => {
-                                player.isKillMode = false;
-                                player.speed = PLAYER_SPEED;
-                                player.killModeTimeout = false;
-                            }, 10 * 1000)
+                            player.setKillMode()
                         }
                     }
                 }
@@ -285,7 +336,31 @@ class Player extends Renderer {
             }
         }
 
+        for (const chars of game.characters) {
+            for (const cellObject of chars) {
+                if (cellObject.getType() === TYPE_VOLCANO) {
+                    if (CollisionHelper.collides(cellObject, player)) {
+                        game.state = STATE_STOPPED
+                        console.log('game finished', 'collision to volcano')
+                    }
+                }
+            }
+        }
+
         this.eatCoins()
+    }
+
+    setKillMode() {
+        player.isKillMode = true;
+        player.speed += 2
+        if (player.isKillMode) {
+            clearTimeout(player.killModeTimeout)
+        }
+        player.killModeTimeout = setTimeout(() => {
+            player.isKillMode = false;
+            player.speed = PLAYER_SPEED;
+            player.killModeTimeout = false;
+        }, 10 * 1000)
     }
 }
 
@@ -297,8 +372,10 @@ class Enemy extends Renderer {
         this.dir = null;
         this.moveInterval = null;
         this.$enemy = null;
-        this.speed = ENEMY_SPEED + Math.random() * ENEMY_SPEED * 2
+        this.speed = ENEMY_SPEED + Math.random()
         this.isKilled = false;
+        this.width = ENEMY_WIDTH;
+        this.height = ENEMY_HEIGHT;
     }
 
     render() {
@@ -314,8 +391,8 @@ class Enemy extends Renderer {
                 position: 'absolute',
                 top: this.y + 'px',
                 left: this.x + 'px',
-                width: ENEMY_WIDTH + 'px',
-                height: ENEMY_HEIGHT + 'px',
+                width: this.width + 'px',
+                height: this.height + 'px',
                 background: 'red',
                 borderRadius: '50%',
                 zIndex: "50",
@@ -339,13 +416,13 @@ class Enemy extends Renderer {
 
     setDirection() {
         if (this.moveInterval) {
-            if (this.dir === MOVING_LEFT && MoveHelper.canGoLeft(this.x, this.y, this.speed)) {
+            if (this.dir === MOVING_LEFT && MoveHelper.canGoLeft(this.x, this.y, this.speed, [TYPE_PLAYER_CELL])) {
                 this.x -= this.speed;
-            } else if (this.dir === MOVING_RIGHT && MoveHelper.canGoRight(this.x, this.y, this.speed)) {
+            } else if (this.dir === MOVING_RIGHT && MoveHelper.canGoRight(this.x, this.y, this.speed, [TYPE_PLAYER_CELL])) {
                 this.x += this.speed;
-            } else if (this.dir === MOVING_UP && MoveHelper.canGoUp(this.x, this.y, this.speed)) {
+            } else if (this.dir === MOVING_UP && MoveHelper.canGoUp(this.x, this.y, this.speed, [TYPE_PLAYER_CELL])) {
                 this.y -= this.speed;
-            } else if (this.dir === MOVING_DOWN && MoveHelper.canGoDown(this.x, this.y, this.speed)) {
+            } else if (this.dir === MOVING_DOWN && MoveHelper.canGoDown(this.x, this.y, this.speed, [TYPE_PLAYER_CELL])) {
                 this.y += this.speed;
             } else {
                 clearTimeout(this.moveInterval);
@@ -357,10 +434,10 @@ class Enemy extends Renderer {
         }
 
         this.dir = null;
-        const canGoLeft = MoveHelper.canGoLeft(this.x, this.y, this.speed);
-        const canGoRight = MoveHelper.canGoRight(this.x, this.y, this.speed);
-        const canGoUp = MoveHelper.canGoUp(this.x, this.y, this.speed);
-        const canGoDown = MoveHelper.canGoDown(this.x, this.y, this.speed);
+        const canGoLeft = MoveHelper.canGoLeft(this.x, this.y, this.speed, [TYPE_PLAYER_CELL]);
+        const canGoRight = MoveHelper.canGoRight(this.x, this.y, this.speed, [TYPE_PLAYER_CELL]);
+        const canGoUp = MoveHelper.canGoUp(this.x, this.y, this.speed, [TYPE_PLAYER_CELL]);
+        const canGoDown = MoveHelper.canGoDown(this.x, this.y, this.speed, [TYPE_PLAYER_CELL]);
         const randomNumber = Math.random();
         const xDirection = randomNumber > .5;
         if (xDirection) {
@@ -459,6 +536,7 @@ class Enemy extends Renderer {
                 this.isKilled = true;
             } else {
                 game.state = STATE_STOPPED
+                console.log('game finished', 'touch to enemy')
             }
         }
     }
@@ -572,6 +650,8 @@ class Wall extends Renderer {
     constructor(...props) {
         super(...props)
         this.$wall = null;
+        this.width = WALL_WIDTH;
+        this.height = WALL_HEIGHT;
     }
 
     render() {
@@ -580,8 +660,8 @@ class Wall extends Renderer {
                 position: 'absolute',
                 top: this.y + 'px',
                 left: this.x + 'px',
-                width: WALL_WIDTH + 'px',
-                height: WALL_HEIGHT + 'px',
+                width: this.width + 'px',
+                height: this.height + 'px',
                 background: "darkcyan",
                 zIndex: "1",
             })
@@ -598,9 +678,32 @@ class Wall extends Renderer {
     }
 }
 
+class Volcano extends Wall {
+    constructor(...props) {
+        super(...props)
+    }
+
+    render() {
+        super.render();
+        setStyle(this.$wall, {
+            background: "rgb(222,91,91)",
+        });
+    }
+
+    static create(...params) {
+        return new Volcano(...params);
+    }
+
+    getType() {
+        return TYPE_VOLCANO;
+    }
+}
+
 class LeftWall extends Wall {
     constructor(...props) {
         super(...props);
+        this.width = 5;
+        this.height = WALL_HEIGHT
     }
 
     render() {
@@ -672,10 +775,92 @@ class BottomWall extends Wall {
     }
 }
 
+class LeftTopWall extends Wall {
+    constructor(...props) {
+        super(...props);
+    }
+
+    render() {
+        super.render();
+        setStyle(this.$wall, {
+            background: '',
+            borderTop: '5px solid darkcyan',
+            borderLeft: "5px solid darkcyan",
+        })
+    }
+
+    static create(...params) {
+        return new LeftTopWall(...params);
+    }
+}
+
+class TopRightWall extends Wall {
+    constructor(...props) {
+        super(...props);
+    }
+
+    render() {
+        super.render();
+        setStyle(this.$wall, {
+            background: '',
+            borderTop: '5px solid darkcyan',
+            borderRight: "5px solid darkcyan",
+            left: this.x - 5 + 'px',
+        })
+    }
+
+    static create(...params) {
+        return new TopRightWall(...params);
+    }
+}
+
+class RightBottomWall extends Wall {
+    constructor(...props) {
+        super(...props);
+    }
+
+    render() {
+        super.render();
+        setStyle(this.$wall, {
+            background: '',
+            borderRight: '5px solid darkcyan',
+            borderBottom: "5px solid darkcyan",
+            left: this.x - 5 + 'px',
+            top: this.y - 5 + 'px',
+        })
+    }
+
+    static create(...params) {
+        return new RightBottomWall(...params);
+    }
+}
+
+class BottomLeftWall extends Wall {
+    constructor(...props) {
+        super(...props);
+    }
+
+    render() {
+        super.render();
+        setStyle(this.$wall, {
+            background: '',
+            borderBottom: '5px solid darkcyan',
+            borderLeft: "5px solid darkcyan",
+            top: this.y - 5 + 'px',
+        })
+    }
+
+    static create(...params) {
+        return new BottomLeftWall(...params);
+    }
+}
+
 class EmptyCell extends Renderer {
     constructor(...props) {
         super(...props)
         this.$emptyCell = null;
+        this.width = WALL_WIDTH;
+        this.height = WALL_HEIGHT;
     }
 
     render() {
@@ -684,8 +869,8 @@ class EmptyCell extends Renderer {
                 position: 'absolute',
                 top: this.y + 'px',
                 left: this.x + 'px',
-                width: WALL_WIDTH + 'px',
-                height: WALL_HEIGHT + 'px',
+                width: this.width + 'px',
+                height: this.height + 'px',
                 background: "rgb(246,237,237)",
                 border: '1px solid rgb(246,237,237)',
                 borderColor: 'rgb(250,245,245)',
@@ -704,7 +889,7 @@ class EmptyCell extends Renderer {
     }
 }
 
-class SlowCell extends EmptyCell {
+class PlayerCell extends EmptyCell {
     constructor(...props) {
         super(...props);
     }
@@ -718,7 +903,11 @@ class SlowCell extends EmptyCell {
     }
 
     static create(...params) {
-        return new SlowCell(...params);
+        return new PlayerCell(...params);
+    }
+
+    getType() {
+        return TYPE_PLAYER_CELL;
     }
 }
 
@@ -727,13 +916,18 @@ const PLAYER_CHAR = {
     "o": Coin,
     'p': Player,
     "x": Enemy,
-    ' ': EmptyCell,
+    ' ': Coin,
     'l': LeftWall,
     'r': RightWall,
     't': TopWall,
     'b': BottomWall,
-    '.': SlowCell,
+    '.': PlayerCell,
     'k': KillCoin,
+    'v': Volcano,
+    '1': LeftTopWall,
+    '2': TopRightWall,
+    '3': RightBottomWall,
+    '4': BottomLeftWall,
 }
 
 function getClassByChar(char) {
