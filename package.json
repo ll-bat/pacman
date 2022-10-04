@@ -4,6 +4,7 @@
     "webpack-cli": "^4.9.2"
   },
   "scripts":  {
-    "start": "npx webpack"
+    "start": "npx webpack --env mode=production",
+    "start-dev": "npx webpack --env mode=development"
   }
 }
